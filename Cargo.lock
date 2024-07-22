@@ -578,21 +578,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_game"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy_asset_loader",
- "bevy_kira_audio",
- "embed-resource",
- "image",
- "log",
- "rand",
- "webbrowser",
- "winit",
-]
-
-[[package]]
 name = "bevy_gilrs"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2510,8 +2495,8 @@ name = "mobile"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_game",
  "cpal",
+ "rps",
 ]
 
 [[package]]
@@ -3278,6 +3263,21 @@ dependencies = [
  "bitflags 2.5.0",
  "serde",
  "serde_derive",
+]
+
+[[package]]
+name = "rps"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_asset_loader",
+ "bevy_kira_audio",
+ "embed-resource",
+ "image",
+ "log",
+ "rand",
+ "webbrowser",
+ "winit",
 ]
 
 [[package]]
