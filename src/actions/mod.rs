@@ -1,13 +1,8 @@
-use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
+use rand::distributions::{Distribution, Standard};
+use rand::Rng;
 
-use crate::actions::game_control::{get_movement, GameControl};
-use crate::player::Player;
 use crate::GameState;
-
-mod game_control;
-
-pub const FOLLOW_EPSILON: f32 = 5.;
 
 pub struct ActionsPlugin;
 
@@ -15,46 +10,59 @@ pub struct ActionsPlugin;
 // Actions can then be used as a resource in other systems to act on the player input.
 impl Plugin for ActionsPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<Actions>().add_systems(
-            Update,
+        app.add_systems(
+            FixedUpdate,
             set_movement_actions.run_if(in_state(GameState::Playing)),
-        );
+        )
+        .insert_resource(Time::<Fixed>::from_hz(2.0));
     }
 }
 
-#[derive(Default, Resource)]
-pub struct Actions {
-    pub player_movement: Option<Vec2>,
+#[derive(Default, Component)]
+pub struct Action {
+    pub movement: Option<Vec2>,
 }
 
-pub fn set_movement_actions(
-    mut actions: ResMut<Actions>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    touch_input: Res<Touches>,
-    player: Query<&Transform, With<Player>>,
-    camera: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
-) {
-    let mut player_movement = Vec2::new(
-        get_movement(GameControl::Right, &keyboard_input)
-            - get_movement(GameControl::Left, &keyboard_input),
-        get_movement(GameControl::Up, &keyboard_input)
-            - get_movement(GameControl::Down, &keyboard_input),
-    );
+#[derive(Debug)]
+enum Direction {
+    Up,
+    Right,
+    Down,
+    Left,
+}
 
-    if let Some(touch_position) = touch_input.first_pressed_position() {
-        let (camera, camera_transform) = camera.single();
-        if let Some(touch_position) = camera.viewport_to_world_2d(camera_transform, touch_position)
-        {
-            let diff = touch_position - player.single().translation.xy();
-            if diff.length() > FOLLOW_EPSILON {
-                player_movement = diff.normalize();
-            }
+impl Distribution<Direction> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Direction {
+        match rng.gen_range(0..=3) {
+            // rand 0.8
+            0 => Direction::Up,
+            1 => Direction::Right,
+            2 => Direction::Down,
+            _ => Direction::Left,
         }
     }
+}
 
-    if player_movement != Vec2::ZERO {
-        actions.player_movement = Some(player_movement.normalize());
-    } else {
-        actions.player_movement = None;
+impl From<Direction> for Vec2 {
+    fn from(value: Direction) -> Self {
+        match value {
+            Direction::Up => Vec2::new(1., 0.),
+            Direction::Right => Vec2::new(0., 1.),
+            Direction::Down => Vec2::new(-1., 0.),
+            Direction::Left => Vec2::new(0., -1.),
+        }
+    }
+}
+
+pub fn set_movement_actions(mut actions: Query<&mut Action>) {
+    for mut action in actions.iter_mut() {
+        let direction: Direction = rand::random();
+        let movement: Vec2 = direction.into();
+
+        if movement != Vec2::ZERO {
+            action.movement = Some(movement.normalize());
+        } else {
+            action.movement = None;
+        }
     }
 }

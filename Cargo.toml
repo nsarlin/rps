@@ -65,7 +65,6 @@ bevy = { version = "0.14", default-features = false, features = [
     "webgl2",
     "sysinfo_plugin",
 ] }
-bevy_kira_audio = { version = "0.20" }
 bevy_asset_loader = { version = "0.21" }
 rand = { version = "0.8.3" }
 webbrowser = { version = "1", features = ["hardened"] }

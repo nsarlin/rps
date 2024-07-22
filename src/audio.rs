@@ -1,4 +1,4 @@
-use crate::actions::{set_movement_actions, Actions};
+use crate::actions::{set_movement_actions, Action};
 use crate::loading::AudioAssets;
 use crate::GameState;
 use bevy::prelude::*;
@@ -34,19 +34,19 @@ fn start_audio(mut commands: Commands, audio_assets: Res<AudioAssets>, audio: Re
 }
 
 fn control_flying_sound(
-    actions: Res<Actions>,
+    actions: Res<Action>,
     audio: Res<FlyingAudio>,
     mut audio_instances: ResMut<Assets<AudioInstance>>,
 ) {
     if let Some(instance) = audio_instances.get_mut(&audio.0) {
         match instance.state() {
             PlaybackState::Paused { .. } => {
-                if actions.player_movement.is_some() {
+                if actions.movement.is_some() {
                     instance.resume(AudioTween::default());
                 }
             }
             PlaybackState::Playing { .. } => {
-                if actions.player_movement.is_none() {
+                if actions.movement.is_none() {
                     instance.pause(AudioTween::default());
                 }
             }
