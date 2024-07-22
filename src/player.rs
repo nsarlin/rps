@@ -131,7 +131,7 @@ fn move_player(
                 0.,
             );
 
-            if is_inside(player_transform.translation + wanted, &window) {
+            if is_inside(player_transform.translation + wanted, window) {
                 wanted
             } else {
                 Vec3::ZERO
@@ -162,7 +162,7 @@ fn handle_collides<S: Component + Rps + Default, T: Component>(
                 commands
                     .spawn(SpriteBundle {
                         texture: S::texture(&textures),
-                        transform: tgt_pos.clone(),
+                        transform: *tgt_pos,
                         ..Default::default()
                     })
                     .insert(S::default())
