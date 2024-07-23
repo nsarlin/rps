@@ -66,24 +66,38 @@ fn spawn_single_rps<T: Component + Rps + Default>(
     commands: &mut Commands,
     window: &Window,
     textures: &TextureAssets,
+    spawned: &mut Vec<Vec3>,
 ) {
     let screen_size_x = window.resolution.width();
     let screen_size_y = window.resolution.width();
 
     let mut rng = rand::thread_rng();
     let radius = PLAYER_SIZE / 2.;
-    let pos_x = rng.gen_range(radius..(screen_size_x - radius));
-    let pos_y = rng.gen_range(radius..(screen_size_y - radius));
+
+    let pos = loop {
+        let pos_x = rng.gen_range(radius..(screen_size_x - radius));
+        let pos_y = rng.gen_range(radius..(screen_size_y - radius));
+
+        let pos = Vec3::new(
+            pos_x - (screen_size_x / 2.),
+            pos_y - (screen_size_y / 2.),
+            1.,
+        );
+
+        if !spawned
+            .iter()
+            .any(|spawned_pos| is_colliding(*spawned_pos, pos))
+        {
+            break pos;
+        }
+    };
+
+    spawned.push(pos);
 
     commands
         .spawn(SpriteBundle {
             texture: T::texture(textures),
-            transform: Transform::from_translation(Vec3::new(
-                pos_x - (screen_size_x / 2.),
-                pos_y - (screen_size_y / 2.),
-                1.,
-            ))
-            .with_scale(Vec3::new(0.1, 0.1, 0.)),
+            transform: Transform::from_translation(pos).with_scale(Vec3::new(0.1, 0.1, 0.)),
             ..Default::default()
         })
         .insert(T::default())
@@ -93,11 +107,12 @@ fn spawn_single_rps<T: Component + Rps + Default>(
 
 fn spawn_rps(mut commands: Commands, windows: Query<&Window>, textures: Res<TextureAssets>) {
     let window = windows.single();
+    let mut spawned = Vec::new();
 
     for _ in 0..PLAYER_COUNT {
-        spawn_single_rps::<Rock>(&mut commands, window, &textures);
-        spawn_single_rps::<Paper>(&mut commands, window, &textures);
-        spawn_single_rps::<Scissors>(&mut commands, window, &textures);
+        spawn_single_rps::<Rock>(&mut commands, window, &textures, &mut spawned);
+        spawn_single_rps::<Paper>(&mut commands, window, &textures, &mut spawned);
+        spawn_single_rps::<Scissors>(&mut commands, window, &textures, &mut spawned);
     }
 }
 
