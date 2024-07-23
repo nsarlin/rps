@@ -84,9 +84,10 @@ fn spawn_single_rps<T: Component + Rps + Default>(
             1.,
         );
 
-        if !spawned
-            .iter()
-            .any(|spawned_pos| is_colliding(*spawned_pos, pos))
+        if is_inside(pos, window)
+            && !spawned
+                .iter()
+                .any(|spawned_pos| is_colliding(*spawned_pos, pos))
         {
             break pos;
         }
