@@ -173,22 +173,20 @@ fn handle_collides<S: Component + Rps + Default, T: Component>(
     let mut deads = Vec::new();
     for src_pos in src_query.iter() {
         for (tgt, tgt_pos) in target_query.iter() {
-            if !deads.contains(&tgt) {
-                if is_colliding(src_pos.translation, tgt_pos.translation) {
-                    commands.entity(tgt).despawn();
+            if !deads.contains(&tgt) && is_colliding(src_pos.translation, tgt_pos.translation) {
+                commands.entity(tgt).despawn();
 
-                    commands
-                        .spawn(SpriteBundle {
-                            texture: S::texture(&textures),
-                            transform: *tgt_pos,
-                            ..Default::default()
-                        })
-                        .insert(S::default())
-                        .insert(Action::default())
-                        .insert(Player);
+                commands
+                    .spawn(SpriteBundle {
+                        texture: S::texture(&textures),
+                        transform: *tgt_pos,
+                        ..Default::default()
+                    })
+                    .insert(S::default())
+                    .insert(Action::default())
+                    .insert(Player);
 
-                    deads.push(tgt);
-                }
+                deads.push(tgt);
             }
         }
     }
