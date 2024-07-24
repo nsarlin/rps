@@ -7,12 +7,17 @@ use rand::Rng;
 pub struct PlayerPlugin;
 
 const PLAYER_COUNT: usize = 10;
+const PLAYER_SIZE: f32 = 52.;
 
 #[derive(Component)]
 pub struct Player;
 
-trait Rps {
+pub trait Rps {
+    type Target: Rps + Component;
+    type Predator: Rps + Component;
     fn texture(textures: &TextureAssets) -> Handle<Image>;
+    fn flee_radius() -> f32;
+    fn attack_radius() -> f32;
 }
 
 #[derive(Component, Default)]
@@ -22,6 +27,18 @@ impl Rps for Rock {
     fn texture(textures: &TextureAssets) -> Handle<Image> {
         textures.rock.clone()
     }
+
+    fn flee_radius() -> f32 {
+        500.
+    }
+
+    fn attack_radius() -> f32 {
+        300.
+    }
+
+    type Target = Scissors;
+
+    type Predator = Paper;
 }
 
 #[derive(Component, Default)]
@@ -31,6 +48,18 @@ impl Rps for Paper {
     fn texture(textures: &TextureAssets) -> Handle<Image> {
         textures.paper.clone()
     }
+
+    fn flee_radius() -> f32 {
+        400.
+    }
+
+    fn attack_radius() -> f32 {
+        400.
+    }
+
+    type Target = Rock;
+
+    type Predator = Scissors;
 }
 
 #[derive(Component, Default)]
@@ -40,9 +69,19 @@ impl Rps for Scissors {
     fn texture(textures: &TextureAssets) -> Handle<Image> {
         textures.scissors.clone()
     }
-}
 
-const PLAYER_SIZE: f32 = 52.;
+    fn flee_radius() -> f32 {
+        300.
+    }
+
+    fn attack_radius() -> f32 {
+        500.
+    }
+
+    type Target = Paper;
+
+    type Predator = Rock;
+}
 
 /// This plugin handles player related stuff like movement
 /// Player logic is only active during the State `GameState::Playing`
@@ -53,9 +92,9 @@ impl Plugin for PlayerPlugin {
                 Update,
                 (
                     move_player,
-                    handle_collides::<Rock, Scissors>,
-                    handle_collides::<Scissors, Paper>,
-                    handle_collides::<Paper, Rock>,
+                    handle_collides::<Rock>,
+                    handle_collides::<Scissors>,
+                    handle_collides::<Paper>,
                 )
                     .run_if(in_state(GameState::Playing)),
             );
@@ -131,6 +170,36 @@ fn is_inside(pos: Vec3, window: &Window) -> bool {
     pos.x > min_x && pos.x < max_x && pos.y > min_y && pos.y < max_y
 }
 
+fn clip_inside(pos: Vec3, window: &Window) -> Vec3 {
+    let screen_size_x = window.resolution.width();
+    let screen_size_y = window.resolution.height();
+    let radius = PLAYER_SIZE / 2.;
+
+    let max_x = screen_size_x / 2. - radius;
+    let max_y = screen_size_y / 2. - radius;
+
+    let min_x = -screen_size_x / 2. + radius;
+    let min_y = -screen_size_y / 2. + radius;
+
+    let pos_x = if pos.x < min_x {
+        min_x
+    } else if pos.x > max_x {
+        max_x
+    } else {
+        pos.x
+    };
+
+    let pos_y = if pos.y < min_y {
+        min_y
+    } else if pos.y > max_y {
+        max_y
+    } else {
+        pos.y
+    };
+
+    Vec3::new(pos_x, pos_y, 0.)
+}
+
 fn move_player(
     time: Res<Time>,
     mut player_query: Query<(&mut Transform, &Action), With<Player>>,
@@ -141,22 +210,16 @@ fn move_player(
 
     for (mut player_transform, action) in player_query.iter_mut() {
         let movement = if let Some(movement) = action.movement {
-            let wanted = Vec3::new(
+            Vec3::new(
                 movement.x * speed * time.delta_seconds(),
                 movement.y * speed * time.delta_seconds(),
                 0.,
-            );
-
-            if is_inside(player_transform.translation + wanted, window) {
-                wanted
-            } else {
-                Vec3::ZERO
-            }
+            )
         } else {
             Vec3::ZERO
         };
 
-        player_transform.translation += movement;
+        player_transform.translation = clip_inside(player_transform.translation + movement, window);
     }
 }
 
@@ -164,10 +227,10 @@ fn is_colliding(src: Vec3, target: Vec3) -> bool {
     src.distance(target) < PLAYER_SIZE
 }
 
-fn handle_collides<S: Component + Rps + Default, T: Component>(
+fn handle_collides<S: Component + Rps + Default>(
     mut commands: Commands,
     src_query: Query<&Transform, With<S>>,
-    target_query: Query<(Entity, &Transform), With<T>>,
+    target_query: Query<(Entity, &Transform), With<S::Target>>,
     textures: Res<TextureAssets>,
 ) {
     let mut deads = Vec::new();
